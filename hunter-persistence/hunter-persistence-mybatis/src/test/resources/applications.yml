@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    druid:
+      name: ${spring.application.name}
+      username:
+      password:
+      url: jdbc:sqlite:D:\Program Files\Java\projects\musclecoder\kft-mcht-server\env\test\config\kft-server.db
+      initialSize: 10
+      minIdle: 10
+      maxActive: 50
+      maxWait: 300000
+      validationQuery: SELECT 'x'
+      maxPoolPreparedStatementPerConnectionSize: 0
+      removeAbandoned: true
+      logAbandoned: true
+      monitor:
+        url: /status/druid/*
+
+foo: a
