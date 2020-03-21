@@ -4,7 +4,7 @@ spring:
       name: ${spring.application.name}
       username:
       password:
-      url: jdbc:sqlite:D:\Program Files\Java\projects\iboxpay\hx\hunter-search\hunter-deploy\src\test\resources\sqllite.db
+      url: jdbc:sqlite:\sqllite.db
       initialSize: 10
       minIdle: 10
       maxActive: 50
