@@ -2,12 +2,14 @@ package com.hunter.persistence.mybatis.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.hunter.persistence.mybatis.config.model.*;
+import com.hunter.persistence.mybatis.config.model.Insert;
+import com.hunter.persistence.mybatis.config.model.Mapper;
+import com.hunter.persistence.mybatis.config.model.Select;
+import com.hunter.persistence.mybatis.ext.JsonMapperBuilder;
 import com.hunter.persistence.mybatis.ext.SqlModel;
 import com.hunter.persistence.mybatis.mapper.MybatisConfigMapper;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
-import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.session.Configuration;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.slf4j.Logger;
@@ -21,15 +23,14 @@ import javax.annotation.PostConstruct;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.Collection;
 import java.util.List;
-import java.util.UUID;
 
 @Service
-public class ConfigService {
+public class XmlConfigService {
     private Logger logger = LoggerFactory.getLogger(getClass());
     private String NAME_SPACE_PREFIX = "MybatisMapper.";
     @Autowired
@@ -39,7 +40,7 @@ public class ConfigService {
 
     private String LOG_FORMAT = "load mybatis sql config,sys -> %-10s namespace -> %-20s sqlId -> %-20s";
 
-    @PostConstruct
+    /*@PostConstruct
     public void setUp() {
         List<MybatisEntity> list = mybatisConfigMapper.selectAll();
         if (null == list || list.isEmpty()) {
@@ -50,21 +51,10 @@ public class ConfigService {
             logger.info(String.format(LOG_FORMAT, mybatisEntity.getSys(), mybatisEntity.getNamespace(), mybatisEntity.getSqlId()));
             config(mybatisEntity);
         });
-    }
+    }*/
 
     public void add(MybatisEntity mybatisEntity) {
         mybatisConfigMapper.insert(mybatisEntity);
-        config(mybatisEntity);
-    }
-
-    public void update(MybatisEntity mybatisEntity) {
-        String mappedId =mybatisEntity.getSys() + "." + mybatisEntity.getNamespace() + "." + mybatisEntity.getSqlId();
-        Collection<MappedStatement> collection = sqlSessionTemplate.getConfiguration().getMappedStatements();
-        for (MappedStatement mappedStatement : collection) {
-            if (mappedStatement.getId().equals(mappedId)) {
-                collection.remove(mappedStatement);
-            }
-        }
         config(mybatisEntity);
     }
 
@@ -95,59 +85,54 @@ public class ConfigService {
             }
         }
         Configuration configuration = sqlSessionTemplate.getConfiguration();
-        /*JsonMapperBuilder jsonMapperBuilder = new JsonMapperBuilder(configuration, "", Lists.newArrayList(sqlModel));
-        jsonMapperBuilder.parse();*/
-        XMLMapperBuilder xmlMapperBuilder = new XMLMapperBuilder(new ByteArrayInputStream(beanToxmlValue(sqlModel).getBytes()), configuration, UUID.randomUUID().toString(), configuration.getSqlFragments());
+        JsonMapperBuilder jsonMapperBuilder = new JsonMapperBuilder(configuration, "", Lists.newArrayList(sqlModel));
+        jsonMapperBuilder.parse();
+
+        XMLMapperBuilder xmlMapperBuilder = new XMLMapperBuilder(new ByteArrayInputStream(beanToxmlValue().getBytes()), configuration, "", configuration.getSqlFragments());
         xmlMapperBuilder.parse();
     }
 
-    public static String beanToxmlValue(SqlModel sqlModel) {
-        Mapper mapper = new Mapper();
-        mapper.setNamespace(sqlModel.getNamespace());
 
-        switch (sqlModel.getCommandType()) {
-            case "SELECT":
-                Select select = new Select();
-                select.setId(sqlModel.getId());
-                select.setResultType(sqlModel.getResultType());
-                select.setParameterType(sqlModel.getParameterType());
-                select.setText(sqlModel.getSql());
-                mapper.setSelect(Lists.newArrayList(select));
-                break;
-            case "DELETE":
-                Delete delete = new Delete();
-                delete.setId(sqlModel.getId());
-                delete.setResultType(sqlModel.getResultType());
-                delete.setParameterType(sqlModel.getParameterType());
-                delete.setText(sqlModel.getSql());
-                mapper.setDelete(Lists.newArrayList(delete));
-                break;
-            case "UPDATE":
-                Update update = new Update();
-                update.setId(sqlModel.getId());
-                update.setResultType(sqlModel.getResultType());
-                update.setParameterType(sqlModel.getParameterType());
-                update.setText(sqlModel.getSql());
-                mapper.setUpdate(Lists.newArrayList(update));
-                break;
-            case "INSERT":
-                Insert insert = new Insert();
-                insert.setId(sqlModel.getId());
-                insert.setResultType(sqlModel.getResultType());
-                insert.setParameterType(sqlModel.getParameterType());
-                insert.setText(sqlModel.getSql());
-                mapper.setInsert(Lists.newArrayList(insert));
-                break;
-            default:
-                throw new IllegalArgumentException("commandType must be [SELECT/DELETE/UPDATE/INSERT]");
-        }
+    public static void main(String[] args) throws JAXBException {
+        String xml = beanToxmlValue();
+        System.out.println(xml);
+        String result = StringEscapeUtils.unescapeXml(xml);
+        System.out.println(result);
+
+    }
+
+    public static String beanToxmlValue() {
+        Mapper mapper = new Mapper();
+        mapper.setNamespace("test");
+
+        Insert insert = new Insert();
+        insert.setId("insertById");
+        insert.setParameterType("java.lang.String");
+        insert.setText("insert into tbl_user (userName,password,email,insertTime,updateTime) values(#{userName},#{password},#{email},#{insertTime},#{updateTime})");
+
+        mapper.setInsert(Lists.newArrayList(insert));
+
+
+        Select select = new Select();
+        select.setId("insertById2");
+        select.setResultType("java.util.Map");
+        select.setText("SELECT * FROM tbl_mybatis where 1=1  <if test=\"sys != null\">and sys=#{sys}</if>");
+        mapper.setSelect(Lists.newArrayList(select));
+
         String str = null;
         try {
             str = beanToXml(mapper, Mapper.class);
         } catch (JAXBException e) {
             e.printStackTrace();
         }
+        System.out.println(str);
         return StringEscapeUtils.unescapeXml(str);
+    }
+    public static Object xmlToBean(String xmlValue, Class<?> load) throws JAXBException {
+        JAXBContext context = JAXBContext.newInstance(load);
+        Unmarshaller unmarshaller = context.createUnmarshaller();
+        Object object = unmarshaller.unmarshal(new ByteArrayInputStream(xmlValue.getBytes()));
+        return object;
     }
 
     public static String beanToXml(Object obj, Class<?> load) throws JAXBException {
