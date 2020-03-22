@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hunter.persistence.mybatis.mapper.MybatisConfigMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id,sys,namespace,sql,sql_id as sqlId,properties,remark
+    </sql>
+    <select id="selectAll" resultType="com.hunter.persistence.mybatis.config.MybatisEntity">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM tbl_mybatis
+        <if test="sys != null">and sys=#{sys}</if>
+    </select>
+
+    <insert id="insert" parameterType="com.hunter.persistence.mybatis.config.MybatisEntity">
+        insert into tbl_mybatis (sys,namespace,sql,sql_id,properties,remark)
+        values (#{sys},#{namespace},#{sql},#{sqlId},#{properties},#{remark})
+    </insert>
+</mapper>

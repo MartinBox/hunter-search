@@ -1,17 +1,21 @@
 package com.hunter;
 
-import com.hunter.persistence.mybatis.mapper.ISqlMapper;
-import java.util.HashMap;
-import java.util.Map;
-import javax.sql.DataSource;
-import org.apache.ibatis.session.SqlSession;
+import com.google.common.collect.Lists;
+import com.hunter.persistence.mybatis.ext.JsonMapperBuilder;
+import com.hunter.persistence.mybatis.ext.SqlModel;
+import org.apache.ibatis.mapping.SqlCommandType;
+import org.apache.ibatis.session.Configuration;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.junit4.SpringRunner;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,41 +26,42 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 public class AppTest {
     @Autowired
-    private ApplicationContext context;
-
-    @Autowired
-    private DataSource dataSource;
-    @Autowired
-    private SqlSession sqlSession;
+    private SqlSessionTemplate sqlSessionTemplate;
     @Value("${foo:spam}")
     private String foo = "bar";
-
-    @Test
-    public void testContextCreated() {
-        assertThat(this.context).isNotNull();
-    }
 
     @Test
     public void testContextInitialized() {
         assertThat(this.foo).isEqualTo("bucket");
     }
 
+    @Before
+    public void setup() {
+        SqlModel sqlModel = new SqlModel();
+        sqlModel.setNamespace("external");
+        sqlModel.setId("selectByUsername");
+        sqlModel.setSql("select * from tbl_user where userName=#{userName}");
+        sqlModel.setResultType("java.util.Map");
+        sqlModel.setCommandType(SqlCommandType.SELECT.name());
+
+        Configuration configuration = sqlSessionTemplate.getConfiguration();
+        JsonMapperBuilder jsonMapperBuilder = new JsonMapperBuilder(configuration, "", Lists.newArrayList(sqlModel));
+        jsonMapperBuilder.parse();
+    }
+
+    @Test
+    public void external() {
+        Map<String, Object> args = new HashMap<>();
+        args.put("userName", "2019031902924240");
+        Map<String, Object> map = sqlSessionTemplate.selectOne("external.selectByUsername", args);
+        System.out.println(map);
+    }
+
     @Test
     public void sql() {
         Map<String, Object> args = new HashMap<>();
         args.put("userName", "2019031902924240");
-        Map<String, Object> map = sqlSession.selectOne("UserMapper.selectByUsername", args);
+        Map<String, Object> map = sqlSessionTemplate.selectOne("UserMapper.selectByUsername", args);
         System.out.println(map);
-
-        ISqlMapper sqlMapper = sqlSession.getMapper(ISqlMapper.class);
-
-        String sql = "select * from tbl_user where userName=#{userName}";
-        for (Map.Entry<String, Object> entry : args.entrySet()) {
-            sql = sql.replaceAll("#\\{" + entry.getKey() + "}", entry.getValue() + "");
-        }
-
-        System.out.println(sql);
-        Map map1 = sqlMapper.selectOne(sql);
-        System.out.println(map1);
     }
 }

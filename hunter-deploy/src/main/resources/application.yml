@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: hunter-search
   datasource:
     druid:
       name: ${spring.application.name}
