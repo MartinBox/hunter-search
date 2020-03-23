@@ -6,6 +6,7 @@ public class MybatisEntity {
     private String namespace;
     private String sql;
     private String sqlId;
+    private String commandType;
     /* private Map<String, Object> properties;*/
     private String properties;
     private String remark = "";
@@ -17,6 +18,14 @@ public class MybatisEntity {
     public void setProperties(Map<String, Object> properties) {
         this.properties = properties;
     }*/
+
+    public String getCommandType() {
+        return commandType;
+    }
+
+    public void setCommandType(String commandType) {
+        this.commandType = commandType;
+    }
 
     public String getProperties() {
         return properties;

@@ -3,7 +3,7 @@
 <mapper namespace="com.hunter.persistence.mybatis.mapper.MybatisConfigMapper">
     <!-- 通用查询结果列 -->
     <sql id="Base_Column_List">
-        id,sys,namespace,sql,sql_id as sqlId,properties,remark
+        id,sys,namespace,sql,sql_id as sqlId,properties,commandType,remark
     </sql>
     <select id="selectAll" resultType="com.hunter.persistence.mybatis.config.MybatisEntity">
         SELECT
@@ -12,7 +12,7 @@
         <if test="sys != null">and sys=#{sys}</if>
     </select>
     <insert id="insert" parameterType="com.hunter.persistence.mybatis.config.MybatisEntity">
-        insert into tbl_mybatis (sys,namespace,sql,sql_id,properties,remark)
-        values (#{sys},#{namespace},#{sql},#{sqlId},#{properties},#{remark})
+        insert into tbl_mybatis (sys,namespace,sql,sql_id,properties,commandType,remark)
+        values (#{sys},#{namespace},#{sql},#{sqlId},#{properties},#{commandType},#{remark})
     </insert>
 </mapper>

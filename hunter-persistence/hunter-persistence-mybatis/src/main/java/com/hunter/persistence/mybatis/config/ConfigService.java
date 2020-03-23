@@ -2,9 +2,24 @@ package com.hunter.persistence.mybatis.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.hunter.persistence.mybatis.config.model.*;
+import com.hunter.persistence.mybatis.config.model.Delete;
+import com.hunter.persistence.mybatis.config.model.Insert;
+import com.hunter.persistence.mybatis.config.model.Mapper;
+import com.hunter.persistence.mybatis.config.model.Select;
+import com.hunter.persistence.mybatis.config.model.Update;
 import com.hunter.persistence.mybatis.ext.SqlModel;
 import com.hunter.persistence.mybatis.mapper.MybatisConfigMapper;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.UUID;
+import javax.annotation.PostConstruct;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.mapping.MappedStatement;
@@ -16,17 +31,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-
-import javax.annotation.PostConstruct;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.StringWriter;
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 public class ConfigService {
@@ -58,27 +62,38 @@ public class ConfigService {
     }
 
     public void update(MybatisEntity mybatisEntity) {
-        String mappedId =mybatisEntity.getSys() + "." + mybatisEntity.getNamespace() + "." + mybatisEntity.getSqlId();
+        String mapperId = mybatisEntity.getSys() + "." + mybatisEntity.getNamespace() + "." + mybatisEntity.getSqlId();
+        delete(mapperId);
+        config(mybatisEntity);
+    }
+
+    public void delete(String mapperId) {
         Collection<MappedStatement> collection = sqlSessionTemplate.getConfiguration().getMappedStatements();
-        for (MappedStatement mappedStatement : collection) {
-            if (mappedStatement.getId().equals(mappedId)) {
-                collection.remove(mappedStatement);
+        Iterator<MappedStatement> iterator = collection.iterator();
+        while (iterator.hasNext()) {
+            MappedStatement mappedStatement = iterator.next();
+            if (mappedStatement.getId().equals(mapperId)) {
+                iterator.remove();
             }
         }
-        config(mybatisEntity);
     }
 
     public void config(MybatisEntity mybatisEntity) {
         SqlModel sqlModel = null;
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            sqlModel = mapper.readValue(mybatisEntity.getProperties(), SqlModel.class);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (!StringUtils.isEmpty(mybatisEntity.getProperties())) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                sqlModel = mapper.readValue(mybatisEntity.getProperties(), SqlModel.class);
+            } catch (IOException e) {
+                throw new IllegalArgumentException("[properties] is illegal argument", e);
+            }
+        } else {
+            sqlModel = new SqlModel();
         }
         sqlModel.setNamespace(mybatisEntity.getSys() + "." + mybatisEntity.getNamespace());
         sqlModel.setId(mybatisEntity.getSqlId());
         sqlModel.setSql(mybatisEntity.getSql());
+        sqlModel.setCommandType(mybatisEntity.getCommandType());
         config(sqlModel);
     }
 

@@ -1,22 +1,24 @@
-package com.hunter.web;
+package com.hunter.persistence.mybatis.web;
 
 import com.hunter.persistence.mybatis.config.ConfigService;
 import com.hunter.persistence.mybatis.config.MybatisEntity;
-import org.apache.ibatis.mapping.MappedStatement;
+import java.util.HashMap;
+import java.util.Map;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
-@RequestMapping(value = "/statement")
-public class StatementController {
+@RequestMapping(value = "/mb/statement")
+public class MybatisStatementController {
     @Autowired
     private ConfigService configService;
     @Autowired
@@ -36,20 +38,12 @@ public class StatementController {
         return ResponseEntity.ok(result);
     }
 
-    @DeleteMapping(value = "/{id}")
+    @DeleteMapping(value = "/{sys}/{namespace}/{id}")
     @ResponseBody
-    public ResponseEntity delete(@PathVariable("id") String id) {
-        Map<String, String> result = new HashMap<>();
+    public ResponseEntity delete(@PathVariable("sys") String sys, @PathVariable("namespace") String namespace, @PathVariable("id") String id) {
+        Map<String, String> result = new HashMap<>(2);
         try {
-            Collection<MappedStatement> collection = sqlSessionTemplate.getConfiguration().getMappedStatements();
-            Iterator<MappedStatement> iterator = collection.iterator();
-            while (iterator.hasNext()) {
-                MappedStatement mappedStatement = iterator.next();
-                if (mappedStatement.getId().equals(id)) {
-                    collection.remove(mappedStatement);
-                    break;
-                }
-            }
+            configService.delete(sys + "." + namespace + "." + id);
             result.put("code", "200");
         } catch (IllegalArgumentException e) {
             result.put("code", "400");
